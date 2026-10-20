@@ -118,6 +118,8 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .example .row { justify-content: flex-start; --sq: 34px; }
 .example p { color: var(--muted); font-size: .95rem; }
 .guide .note { color: var(--muted); font-size: .85rem; }
+.guide .play { align-self: center; }
+.empty { margin: auto 0 0; text-align: center; color: var(--muted); }
 
 .status { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .status .count { color: var(--muted); font-size: .95rem; }
@@ -319,6 +321,13 @@ function guideCard(withClose) {
   note.className = 'note';
   note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? רמז חושף את האות הבאה מתחילת המילה.';
   card.append(note);
+  if (withClose) {
+    const play = document.createElement('button');
+    play.className = 'primary play';
+    play.id = 'help-play';
+    play.textContent = 'בואו נשחק';
+    card.append(play);
+  }
   return card;
 }
 
@@ -329,7 +338,12 @@ function render() {
 
   const board = document.getElementById('board');
   board.replaceChildren();
-  if (!game.guesses.length) board.append(guideCard(false));
+  if (!game.guesses.length) {
+    const p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = 'הקלידו מילה כדי להתחיל';
+    board.append(p);
+  }
   game.guesses.forEach((g, i) => {
     const won = game.won && i === game.guesses.length - 1;
     board.append(tileRow(g, score(game.answer, g), won && justWon ? 'won' : ''));
@@ -519,7 +533,8 @@ function openHelp() {
   o.replaceChildren(guideCard(true));
   o.hidden = false;
   document.getElementById('help-close').onclick = closeHelp;
-  document.getElementById('help-close').focus();
+  document.getElementById('help-play').onclick = closeHelp;
+  document.getElementById('help-play').focus();
 }
 function closeHelp() { document.getElementById('help').hidden = true; }
 
@@ -542,6 +557,7 @@ document.addEventListener('keydown', e => {
 });
 
 loadGame(store.get('mode') === 'free' ? 'free' : 'daily');
+if (!store.get('seen-help')) { openHelp(); store.set('seen-help', true); }
 </script>
 
 </body>
