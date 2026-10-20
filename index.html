@@ -123,7 +123,13 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 
 .status { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .status .count { color: var(--muted); font-size: .95rem; }
-.status .hint { font-weight: 700; }
+.status .hint { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; margin-top: 4px; font-weight: 700; }
+.status .hint span:first-child { margin-left: 4px; }
+.slot {
+  width: 24px; height: 28px; display: grid; place-items: center;
+  border-bottom: 2px solid var(--line); font-family: var(--font-display); font-size: 1.05rem; font-weight: 400;
+}
+.slot.new { color: var(--green); border-color: var(--green); }
 .status .actions { display: flex; gap: 6px; }
 
 .result { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
@@ -264,10 +270,12 @@ function loadGame(m) {
   if (m === 'daily') {
     const day = dayNumber();
     const saved = store.get('daily');
-    game = saved && saved.day === day ? saved : { day, answer: dailyAnswer(day), guesses: [], hints: 0, won: false };
+    game = saved && saved.day === day ? saved : { day, answer: dailyAnswer(day), guesses: [], hints: 0, revealed: [], won: false };
   } else {
-    game = store.get('free') || { answer: randomAnswer(), guesses: [], hints: 0, won: false };
+    game = store.get('free') || { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], won: false };
   }
+  // Saves from before positional hints only stored a count of letters revealed from the start
+  if (!game.revealed) game.revealed = [...Array(game.hints).keys()];
   typed = '';
   store.set('mode', m);
   render();
@@ -275,7 +283,7 @@ function loadGame(m) {
 function save() { store.set(mode, game); }
 
 function newFreeGame() {
-  game = { answer: randomAnswer(), guesses: [], hints: 0, won: false };
+  game = { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], won: false };
   typed = '';
   save();
   render();
@@ -319,7 +327,7 @@ function guideCard(withClose) {
   }
   const note = document.createElement('p');
   note.className = 'note';
-  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? רמז חושף את האות הבאה מתחילת המילה.';
+  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? רמז חושף אות במקומה המדויק, מתוך מה שעוד לא גיליתם.';
   card.append(note);
   if (withClose) {
     const play = document.createElement('button');
@@ -383,20 +391,18 @@ function renderStatus() {
   count.className = 'count';
   count.textContent = `ניסיונות: ${game.guesses.length} · רמזים: ${game.hints}`;
   left.append(count);
-  if (game.hints) {
-    const h = document.createElement('div');
-    h.className = 'hint';
-    h.textContent = `המילה מתחילה ב־${game.answer.slice(0, game.hints)}`;
-    left.append(h);
-  }
+  if (game.revealed.length) left.append(hintPattern());
   s.append(left);
   const actions = document.createElement('div');
   actions.className = 'actions';
-  if (!game.won && game.hints < game.answer.length - 1) {
+  const known = knownPositions();
+  const unknown = [...game.answer].map((_, i) => i).filter(i => !known.has(i));
+  // Stop before the last unknown letter: revealing it would just give the word away
+  if (!game.won && unknown.length >= 2) {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = 'רמז';
-    b.onclick = () => { game.hints++; save(); render(); };
+    b.onclick = () => { game.revealed.push(pickHint(unknown)); game.hints++; save(); render(); };
     actions.append(b);
   }
   if (!game.won && mode === 'free') {
@@ -407,6 +413,54 @@ function renderStatus() {
     actions.append(b);
   }
   s.append(actions);
+}
+
+// Positions of the answer the player already knows: a start/end run seen in a guess, or a revealed hint
+function knownPositions() {
+  const known = new Set(game.revealed);
+  const len = game.answer.length;
+  for (const g of game.guesses) {
+    const marks = score(game.answer, g);
+    if (marks[0].start) {
+      let k = 0;
+      do known.add(k); while (++k < marks.length && marks[k].cls === 'tail');
+    }
+    const last = marks.length - 1;
+    if (marks[last].end) {
+      for (let k = last; k >= 0; k--) {
+        known.add(len - 1 - (last - k));
+        if (marks[k].cls !== 'tail') break;
+      }
+    }
+  }
+  return known;
+}
+
+// Prefer a letter the player hasn't found anywhere yet; otherwise the earliest unknown position
+function pickHint(unknown) {
+  const found = new Set();
+  for (const g of game.guesses) {
+    const letters = [...norm(g)];
+    score(game.answer, g).forEach((m, i) => { if (m.cls !== 'absent') found.add(letters[i]); });
+  }
+  return unknown.find(i => !found.has(game.answer[i])) ?? unknown[0];
+}
+
+function hintPattern() {
+  const known = knownPositions();
+  const shown = [...display(game.answer)];
+  const row = document.createElement('div');
+  row.className = 'hint';
+  const label = document.createElement('span');
+  label.textContent = 'רמז:';
+  row.append(label);
+  shown.forEach((c, i) => {
+    const t = document.createElement('span');
+    t.className = 'slot' + (game.revealed.includes(i) ? ' new' : '');
+    t.textContent = known.has(i) ? c : '';
+    row.append(t);
+  });
+  return row;
 }
 
 function endCard() {
