@@ -1,6 +1,9 @@
 # אותיות בסדר
 
-A Hebrew word game in the style of [Letroso](https://letroso.com/). Find the secret word (up to 10 letters) with guesses of any length. Tile colors and shapes tell you which letters are in the word, which are in the right order, which sit next to each other, and how the word starts and ends.
+A Hebrew word game in the style of [Letroso](https://letroso.com/).
+Find the secret word (up to 10 letters) with guesses of any length.
+Tile colors and shapes tell you which letters are in the word, which are in the right order,
+which sit next to each other, and how the word starts and ends.
 
 - Daily word (the same for everyone) and an unlimited mode
 - Right-to-left layout, Hebrew keyboard, final letters (ך ם ן ף ץ) handled automatically
