@@ -464,19 +464,16 @@ function renderStatus() {
   s.append(actions);
 }
 
-// Hard mode can be switched at any point. A game counts as hard (in the shared result)
-// only if it was on from the first guess and never turned off.
+// Hard mode can be switched at any point
 function toggleHard() {
   game.hard = !game.hard;
   store.set('hard', game.hard);
-  // Before the first guess the game starts fresh; afterwards any switch means it wasn't hard all along
-  if (!game.guesses.length) delete game.hardAllGame;
-  else game.hardAllGame = false;
   showToast(game.hard ? 'מצב קשה פעיל' : 'מצב קשה כבוי');
   save();
   render();
 }
-const playedHard = () => game.hard && game.hardAllGame !== false;
+// A game counts as hard (in the shared result) only if every guess was made in hard mode
+const playedHard = () => game.guesses.length > 0 && (game.hardGuesses || []).length === game.guesses.length && game.hardGuesses.every(Boolean);
 
 // Hard mode: a guess must keep what earlier guesses and hints revealed. Returns why it doesn't, or null.
 function hardModeError(word) {
@@ -713,6 +710,7 @@ function submit() {
     if (err) return reject(err);
   }
   game.guesses.push(typed);
+  game.hardGuesses = [...(game.hardGuesses || []), !!game.hard];
   if (typed === game.answer) { game.won = true; justWon = true; }
   typed = '';
   save();
