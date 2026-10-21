@@ -224,6 +224,7 @@ const SECRETS=["קיבוצ", "לשונ", "נחש", "רעמ", "שרב", "אמבו
 const LETTERS = 'אבגדהוזחטיכלמנסעפצקרשת';
 const TO_FINAL = { 'כ': 'ך', 'מ': 'ם', 'נ': 'ן', 'פ': 'ף', 'צ': 'ץ' };
 const MAX = 10;
+const LETTER_HINTS_BEFORE_LENGTH = 2;
 // Physical keyboards without a Hebrew layout: QWERTY key -> Hebrew letter in the same place
 const QWERTY = { e:'ק', r:'ר', t:'א', y:'ט', u:'ו', i:'ן', o:'ם', p:'פ', a:'ש', s:'ד', d:'ג', f:'כ', g:'ע', h:'י', j:'ח', k:'ל', l:'ך', ';':'ף', z:'ז', x:'ס', c:'ב', v:'ה', b:'נ', n:'מ', m:'צ', ',':'ת', '.':'ץ' };
 
@@ -320,7 +321,7 @@ function guideCard(withClose) {
   }
   const note = document.createElement('p');
   note.className = 'note';
-  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? רמז חושף אות במקומה המדויק, מתוך מה שעוד לא גיליתם.';
+  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? רמז חושף אות במקומה המדויק, מתוך מה שעוד לא גיליתם. הרמז השלישי חושף גם את אורך המילה.';
   card.append(note);
   if (withClose) {
     const play = document.createElement('button');
@@ -384,18 +385,27 @@ function renderStatus() {
   count.className = 'count';
   count.textContent = `ניסיונות: ${game.guesses.length} · רמזים: ${game.hints}`;
   left.append(count);
-  if (game.revealed.length) left.append(hintPattern());
+  if (game.lengthShown) left.append(hintPattern());
+  else if (game.revealed.length) left.append(hintLetters());
   s.append(left);
   const actions = document.createElement('div');
   actions.className = 'actions';
   const known = knownPositions();
   const unknown = [...game.answer].map((_, i) => i).filter(i => !known.has(i));
-  // Stop before the last unknown letter: revealing it would just give the word away
-  if (!game.won && unknown.length >= 2) {
+  // The word's length is a big clue, so it only comes after two letter hints.
+  // Letters stop before the last unknown one: revealing it would just give the word away.
+  const lengthNext = !game.lengthShown && (game.revealed.length >= LETTER_HINTS_BEFORE_LENGTH || unknown.length < 2);
+  if (!game.won && (lengthNext || unknown.length >= 2)) {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = 'רמז';
-    b.onclick = () => { game.revealed.push(pickHint(unknown)); game.hints++; save(); render(); };
+    b.onclick = () => {
+      if (lengthNext) game.lengthShown = true;
+      else game.revealed.push(pickHint(unknown));
+      game.hints++;
+      save();
+      render();
+    };
     actions.append(b);
   }
   if (!game.won && mode === 'free') {
@@ -439,13 +449,23 @@ function pickHint(unknown) {
   return unknown.find(i => !found.has(game.answer[i])) ?? unknown[0];
 }
 
+// Before the length is revealed: each hinted letter with its position from the start, in its
+// regular (non-final) form so it doesn't give away the end of the word
+function hintLetters() {
+  const row = document.createElement('div');
+  row.className = 'hint';
+  row.textContent = 'רמז: ' + [...game.revealed].sort((a, b) => a - b)
+    .map(i => `אות ${i + 1}: ${game.answer[i]}`).join(' · ');
+  return row;
+}
+
 function hintPattern() {
   const known = knownPositions();
   const shown = [...display(game.answer)];
   const row = document.createElement('div');
   row.className = 'hint';
   const label = document.createElement('span');
-  label.textContent = 'רמז:';
+  label.textContent = `רמז (${shown.length} אותיות):`;
   row.append(label);
   shown.forEach((c, i) => {
     const t = document.createElement('span');
