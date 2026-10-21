@@ -264,7 +264,8 @@ const MAX = 10;
 // Physical keyboards without a Hebrew layout: QWERTY key -> Hebrew letter in the same place
 const QWERTY = { e:'ק', r:'ר', t:'א', y:'ט', u:'ו', i:'ן', o:'ם', p:'פ', a:'ש', s:'ד', d:'ג', f:'כ', g:'ע', h:'י', j:'ח', k:'ל', l:'ך', ';':'ף', z:'ז', x:'ס', c:'ב', v:'ה', b:'נ', n:'מ', m:'צ', ',':'ת', '.':'ץ' };
 
-const display = w => [...w].map((c, i, a) => i === a.length - 1 && TO_FINAL[c] ? TO_FINAL[c] : c).join('');
+// Final form for the last letter, but not for a lone letter: that's the start of a word being typed
+const display = w => [...w].map((c, i, a) => i === a.length - 1 && a.length > 1 && TO_FINAL[c] ? TO_FINAL[c] : c).join('');
 const decodeWord = s => [...s].map(c => LETTERS[c.charCodeAt(0) - 97]).join('');
 
 let VALID = null;
