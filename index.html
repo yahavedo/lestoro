@@ -194,6 +194,8 @@ footer a { color: inherit; }
 .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
 .badge.solved { background: var(--green); color: var(--on-tile); }
 .badge.revealed { background: var(--yellow); color: var(--on-tile); }
+.badge.hard { border: 1px solid var(--yellow); color: var(--yellow); }
+.hist .level { color: var(--muted); font-size: .85rem; }
 .badge.unfinished { background: var(--key-off); color: var(--muted); border: 1px solid var(--line); }
 .stats-note { color: var(--muted); font-size: .8rem; }
 </style>
@@ -880,17 +882,18 @@ function renderStats() {
   } else {
     const table = el('table', 'hist');
     const head = el('tr');
-    for (const h of ['מתי', 'מילה', 'תוצאה', 'ניסיונות', 'רמזים']) head.append(el('th', null, h));
+    for (const h of ['מתי', 'מילה', 'תוצאה', 'מצב', 'ניסיונות', 'רמזים']) head.append(el('th', null, h));
     table.append(el('thead'));
     table.tHead.append(head);
     const body = el('tbody');
     for (const e of list) {
       const tr = el('tr');
       const when = el('td', null, e.mode === 'daily' ? `יומי #${e.day}` : new Date(e.endedAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }));
-      if (e.hard) when.append(el('span', 'meta', 'מצב קשה'));
       const result = el('td');
       result.append(el('span', 'badge ' + e.outcome, OUTCOMES[e.outcome] || e.outcome));
-      tr.append(when, el('td', 'word', display(e.answer)), result, el('td', 'num', e.tries), el('td', 'num', e.hints));
+      const level = el('td');
+      level.append(el('span', e.hard ? 'badge hard' : 'level', e.hard ? 'קשה' : 'רגיל'));
+      tr.append(when, el('td', 'word', display(e.answer)), result, level, el('td', 'num', e.tries), el('td', 'num', e.hints));
       body.append(tr);
     }
     table.append(body);
