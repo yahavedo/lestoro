@@ -150,7 +150,11 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .result .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .primary { background: var(--green); color: var(--on-tile); border: 0; border-radius: 999px; padding: 9px 20px; font-weight: 700; }
 
-.keyboard { display: flex; flex-direction: column; gap: 6px; padding-block: 6px 0; user-select: none; direction: ltr; }
+.keyboard { display: flex; gap: 12px; padding-block: 6px 0; user-select: none; direction: ltr; }
+.kletters { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.kactions { flex: none; width: 68px; display: flex; flex-direction: column; gap: 6px; }
+.kactions .key { max-width: none; flex: none; width: 100%; }
+.kactions .enter { flex: 1; }
 .krow { display: flex; gap: 5px; justify-content: center; }
 .key {
   flex: 1 1 0; max-width: 46px; height: 52px; border: 0; border-radius: 6px;
@@ -735,9 +739,9 @@ function shareText() {
 
 // Left to right, as on a physical Hebrew keyboard
 const KB_ROWS = [
-  ['ק','ר','א','ט','ו','פ','back'],
+  ['ק','ר','א','ט','ו','פ'],
   ['ש','ד','ג','כ','ע','י','ח','ל'],
-  ['ז','ס','ב','ה','נ','מ','צ','ת','enter'],
+  ['ז','ס','ב','ה','נ','מ','צ','ת'],
 ];
 function keyStates() {
   const rank = { x: 1, y: 2, g: 3 }, st = {};
@@ -755,25 +759,35 @@ function renderKeyboard() {
   const kb = document.getElementById('keyboard');
   kb.replaceChildren();
   const st = keyStates();
+  const letters = document.createElement('div');
+  letters.className = 'kletters';
   for (const r of KB_ROWS) {
     const row = document.createElement('div');
     row.className = 'krow';
     for (const k of r) {
       const b = document.createElement('button');
       b.className = 'key';
-      if (k === 'enter') { b.textContent = 'ניחוש'; b.classList.add('wide'); b.onclick = submit; }
-      else if (k === 'back') { b.textContent = 'מחיקה'; b.classList.add('wide'); b.onclick = backspace; }
-      else {
-        b.textContent = k;
-        const s = st[norm(k)];
-        if (s) b.classList.add(s);
-        b.onclick = () => addLetter(k);
-      }
+      b.textContent = k;
+      const s = st[norm(k)];
+      if (s) b.classList.add(s);
+      b.onclick = () => addLetter(k);
       b.tabIndex = -1;
       row.append(b);
     }
-    kb.append(row);
+    letters.append(row);
   }
+  // Delete and guess sit in their own column on the right, apart from the letters
+  const actions = document.createElement('div');
+  actions.className = 'kactions';
+  for (const [label, cls, fn] of [['מחיקה', 'back', backspace], ['ניחוש', 'enter', submit]]) {
+    const b = document.createElement('button');
+    b.className = 'key wide ' + cls;
+    b.textContent = label;
+    b.onclick = fn;
+    b.tabIndex = -1;
+    actions.append(b);
+  }
+  kb.append(letters, actions);
 }
 
 function addLetter(c) {
