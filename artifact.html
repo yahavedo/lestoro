@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>אותיות בסדר</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,7 +54,7 @@ body {
   padding-block: 0 8px;
 }
 header {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px;
   padding-block: 12px 10px; border-bottom: 1px solid var(--line);
 }
 h1 { font-family: var(--font-display); font-weight: 400; font-size: 1.75rem; margin: 0; line-height: 1; }
@@ -163,21 +164,27 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .overlay .guide { max-width: 520px; width: 100%; max-height: 100%; overflow-y: auto; }
 .overlay .close { align-self: flex-start; }
-.stat-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.stat-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
-.stat-tile strong { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-.stat-tile span { color: var(--muted); font-size: .8rem; }
-.table-wrap { overflow-x: auto; }
-.stats table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
-.stats th { text-align: right; color: var(--muted); font-weight: 600; font-size: .8rem; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.stats td { padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.stats td.word { font-family: var(--font-display); font-size: 1.05rem; }
-.stats td.result.won { color: var(--green); font-weight: 700; }
-.stats td.result.revealed, .stats td.result.unsolved { color: var(--muted); }
-.badge { font-family: var(--font-body); font-size: .7rem; font-weight: 700; border: 1px solid var(--yellow); color: var(--yellow); border-radius: 999px; padding: 1px 6px; vertical-align: middle; }
-@media (max-width: 420px) { .stat-tiles { grid-template-columns: repeat(2, 1fr); } }
 footer { text-align: center; font-size: .75rem; color: var(--muted); padding-top: 6px; }
 footer a { color: inherit; }
+
+/* Score history: summary tiles, a filter, then one row per finished game */
+.round svg { width: 18px; height: 18px; display: block; margin: auto; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat { background: var(--bg); border-radius: 10px; padding: 10px 4px; text-align: center; }
+.stat b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: .78rem; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.hist { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .95rem; }
+.hist th { text-align: start; color: var(--muted); font-weight: 600; font-size: .78rem; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.hist td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.hist .num { text-align: center; }
+.hist .word { font-family: var(--font-display); font-size: 1.05rem; }
+.hist .meta { display: block; color: var(--muted); font-size: .75rem; }
+.badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.badge.solved { background: var(--green); color: var(--on-tile); }
+.badge.revealed { background: var(--yellow); color: var(--on-tile); }
+.badge.unfinished { background: var(--key-off); color: var(--muted); border: 1px solid var(--line); }
+.stats-note { color: var(--muted); font-size: .8rem; }
 </style>
 
 <div class="app">
@@ -189,7 +196,7 @@ footer a { color: inherit; }
     <div class="tools">
       <button class="chip" id="mode-daily" aria-pressed="true">יומי</button>
       <button class="chip" id="mode-free" aria-pressed="false">ללא הגבלה</button>
-      <button class="chip round" id="stats-btn" aria-label="התוצאות שלי" title="התוצאות שלי"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="8" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="3" width="3" height="11" rx="1" fill="currentColor"/><rect x="11" y="6" width="3" height="8" rx="1" fill="currentColor"/></svg></button>
+      <button class="chip round" id="stats-btn" aria-label="התוצאות שלי"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 15V9M9 15V3M15 15V7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></button>
       <button class="chip round" id="help-btn" aria-label="איך משחקים">?</button>
     </div>
   </header>
@@ -273,6 +280,60 @@ const store = {
   set(k, v) { try { localStorage.setItem('otiyot-' + k, JSON.stringify(v)); } catch {} },
 };
 
+// History of finished games: solved, revealed, or a daily word left unfinished.
+// Kept in the viewer's private db space when available (one document per month), mirrored in this browser.
+// Entries saved by an earlier version used other field names; convert them on load
+const RESULT_TO_OUTCOME = { won: 'solved', revealed: 'revealed', unsolved: 'unfinished' };
+function upgradeEntry(e) {
+  if (!e || e.outcome) return e;
+  const [d, m, y] = String(e.date || '').split('.').map(Number);
+  return { id: e.id, mode: e.mode, day: e.day || null, answer: e.word, outcome: RESULT_TO_OUTCOME[e.result] || e.result,
+    tries: e.guesses, hints: e.hints, hard: e.hard, endedAt: y ? new Date(y, m - 1, d, 12).getTime() : Date.now() };
+}
+let history = (store.get('history') || []).map(upgradeEntry);
+let historyDb = null;
+let writeChain = Promise.resolve();
+const monthKey = ts => { const d = new Date(ts); return `history-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+function mergeHistory(entries) {
+  const byId = new Map(history.map(e => [e.id, e]));
+  for (const e of entries) if (e && e.id && !byId.has(e.id)) byId.set(e.id, e);
+  history = [...byId.values()].sort((a, b) => b.endedAt - a.endedAt);
+  store.set('history', history);
+}
+// One write at a time; each write sends the whole month's document
+function syncMonths(keys) {
+  if (!historyDb) return;
+  const { db, uid } = historyDb;
+  for (const key of new Set(keys)) {
+    writeChain = writeChain
+      .then(() => db.doc(`data/users/${uid}/${key}`).set({ games: history.filter(e => monthKey(e.endedAt) === key) }))
+      .catch(() => {});
+  }
+}
+function recordGame(g, outcome) {
+  if (!g.id || history.some(e => e.id === g.id)) return;
+  const entry = { id: g.id, mode: g.day ? 'daily' : 'free', day: g.day || null, answer: g.answer, outcome,
+    tries: g.guesses.length, hints: g.hints, hard: playedHard(g), endedAt: Date.now() };
+  mergeHistory([entry]);
+  syncMonths([monthKey(entry.endedAt)]);
+}
+async function connectHistory() {
+  if (!window.claude) return;
+  try {
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const uid = user && await user.id();
+    if (!db || !uid) return;
+    const snap = await db.collection(`data/users/${uid}`).get();
+    const remote = snap.docs.flatMap(d => (d.exists && d.data().games) || []);
+    const remoteIds = new Set(remote.map(e => e.id));
+    const localOnly = history.filter(e => !remoteIds.has(e.id));
+    historyDb = { db, uid };
+    mergeHistory(remote);
+    syncMonths(localOnly.map(e => monthKey(e.endedAt)));
+    if (!document.getElementById('stats').hidden) renderStats();
+  } catch {}
+}
+
 function dayNumber() {
   const d = new Date();
   return Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(2026, 0, 1)) / 86400000) + 1;
@@ -313,17 +374,21 @@ function loadGame(m) {
   if (m === 'daily') {
     const day = dayNumber();
     const saved = store.get('daily');
-    // A daily word left unfinished on an earlier day goes into the history as unsolved
-    if (saved && saved.day !== day && !saved.won && saved.guesses.length) recordGame(saved, 'daily', 'unsolved');
-    game = saved && saved.day === day ? saved : { day, answer: dailyAnswer(day), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
+    // A past day's word that was started but not solved ends as unfinished
+    if (saved && saved.day !== day && !saved.won && saved.guesses.length) {
+      if (!saved.id) saved.id = 'd' + saved.day;
+      recordGame(saved, 'unfinished');
+    }
+    game = saved && saved.day === day ? saved : { id: 'd' + day, day, answer: dailyAnswer(day), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   } else {
-    game = store.get('free') || { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
+    game = store.get('free') || { id: 'f' + Date.now(), answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   }
   // Saves from before positional hints only stored a count of letters revealed from the start
   if (!game.revealed) game.revealed = [...Array(game.hints).keys()];
   if (!game.letterHints) game.letterHints = [];
-  if (m === 'free' && !game.id) game.id = Date.now();
-  if (game.won) recordGame(game, m, 'won');
+  // Saves from before the score history have no id; a game already won joins the history now
+  if (!game.id) { game.id = game.day ? 'd' + game.day : 'f' + Date.now(); store.set(m, game); }
+  if (game.won) recordGame(game, 'solved');
   typed = '';
   store.set('mode', m);
   render();
@@ -331,7 +396,7 @@ function loadGame(m) {
 function save() { store.set(mode, game); }
 
 function newFreeGame() {
-  game = { id: Date.now(), answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
+  game = { id: 'f' + Date.now(), answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   typed = '';
   save();
   render();
@@ -477,7 +542,7 @@ function renderStatus() {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = 'גלו לי';
-    b.onclick = () => { recordGame(game, 'free', 'revealed'); showToast(`המילה הייתה: ${display(game.answer)}`, 3500); newFreeGame(); };
+    b.onclick = () => { recordGame(game, 'revealed'); showToast(`המילה הייתה: ${display(game.answer)}`, 3500); newFreeGame(); };
     actions.append(b);
   }
   s.append(actions);
@@ -493,84 +558,6 @@ function toggleHard() {
 }
 // A game counts as hard (in the shared result) only if every guess was made in hard mode
 const playedHard = (g = game) => g.guesses.length > 0 && (g.hardGuesses || []).length === g.guesses.length && g.hardGuesses.every(Boolean);
-
-// History of finished games, newest last. result: 'won' | 'revealed' | 'unsolved'
-function recordGame(g, gameMode, result) {
-  const history = store.get('history') || [];
-  const id = gameMode === 'daily' ? `d${g.day}` : `f${g.id}`;
-  if (history.some(h => h.id === id)) return;
-  const when = gameMode === 'daily' ? new Date(2026, 0, g.day) : new Date();
-  history.push({
-    id, mode: gameMode, day: g.day, word: g.answer, result,
-    date: `${when.getDate()}.${when.getMonth() + 1}.${when.getFullYear()}`,
-    guesses: g.guesses.length, hints: g.hints, hard: playedHard(g),
-  });
-  store.set('history', history);
-}
-
-const RESULT_LABEL = { won: 'נפתרה', revealed: 'נחשפה', unsolved: 'לא נפתרה' };
-function statsCard() {
-  const history = (store.get('history') || []).slice().reverse();
-  const card = document.createElement('section');
-  card.className = 'guide stats';
-  card.innerHTML = '<button class="chip close" id="stats-close">סגירה</button><h2>התוצאות שלי</h2>';
-  if (!history.length) {
-    const p = document.createElement('p');
-    p.textContent = 'עוד לא סיימתם אף משחק. כל מילה שתפתרו או תחשפו תופיע כאן, עם מספר הניסיונות והרמזים.';
-    card.append(p);
-    return card;
-  }
-  const solved = history.filter(h => h.result === 'won');
-  const avg = list => list.length ? (list.reduce((a, h) => a + h, 0) / list.length).toFixed(1) : '–';
-  const tiles = document.createElement('div');
-  tiles.className = 'stat-tiles';
-  for (const [value, label] of [
-    [history.length, 'משחקים'],
-    [`${Math.round(100 * solved.length / history.length)}%`, 'נפתרו'],
-    [avg(solved.map(h => h.guesses)), 'ניסיונות בממוצע'],
-    [avg(solved.map(h => h.hints)), 'רמזים בממוצע'],
-  ]) {
-    const t = document.createElement('div');
-    t.className = 'stat-tile';
-    t.innerHTML = `<strong></strong><span></span>`;
-    t.querySelector('strong').textContent = value;
-    t.querySelector('span').textContent = label;
-    tiles.append(t);
-  }
-  card.append(tiles);
-  const wrap = document.createElement('div');
-  wrap.className = 'table-wrap';
-  const table = document.createElement('table');
-  table.innerHTML = '<thead><tr><th>מילה</th><th>משחק</th><th>תאריך</th><th>תוצאה</th><th>ניסיונות</th><th>רמזים</th></tr></thead>';
-  const body = document.createElement('tbody');
-  for (const h of history) {
-    const tr = document.createElement('tr');
-    const cells = [display(h.word), h.mode === 'daily' ? `יומית #${h.day}` : 'חופשי', h.date, RESULT_LABEL[h.result], h.guesses, h.hints];
-    cells.forEach((v, i) => {
-      const td = document.createElement('td');
-      td.textContent = v;
-      if (i === 0) {
-        td.className = 'word';
-        if (h.hard) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'קשה'; td.append(' ', b); }
-      }
-      if (i === 3) td.className = 'result ' + h.result;
-      tr.append(td);
-    });
-    body.append(tr);
-  }
-  table.append(body);
-  wrap.append(table);
-  card.append(wrap);
-  return card;
-}
-function openStats() {
-  const o = document.getElementById('stats');
-  o.replaceChildren(statsCard());
-  o.hidden = false;
-  document.getElementById('stats-close').onclick = closeStats;
-  document.getElementById('stats-close').focus();
-}
-function closeStats() { document.getElementById('stats').hidden = true; }
 
 // Hard mode: a guess must keep what earlier guesses and hints revealed. Returns why it doesn't, or null.
 function hardModeError(word) {
@@ -808,7 +795,7 @@ function submit() {
   }
   game.guesses.push(typed);
   game.hardGuesses = [...(game.hardGuesses || []), !!game.hard];
-  if (typed === game.answer) { game.won = true; justWon = true; recordGame(game, mode, 'won'); }
+  if (typed === game.answer) { game.won = true; justWon = true; recordGame(game, 'solved'); }
   typed = '';
   save();
   render();
@@ -833,6 +820,70 @@ function openHelp() {
 }
 function closeHelp() { document.getElementById('help').hidden = true; }
 
+const OUTCOMES = { solved: 'נפתרה', revealed: 'נחשפה', unfinished: 'לא הושלמה' };
+let statsFilter = 'all';
+function renderStats() {
+  const o = document.getElementById('stats');
+  const list = history.filter(e => statsFilter === 'all' || e.mode === statsFilter);
+  const solved = list.filter(e => e.outcome === 'solved');
+  const avg = f => solved.length ? (solved.reduce((s, e) => s + f(e), 0) / solved.length).toFixed(1) : '–';
+  const el = (tag, cls, text) => { const x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; return x; };
+
+  const card = el('section', 'guide');
+  const close = el('button', 'chip close', 'סגירה');
+  close.onclick = closeStats;
+  card.append(close, el('h2', null, 'התוצאות שלי'));
+
+  const filters = el('div', 'filters');
+  for (const [key, label] of [['all', 'הכל'], ['daily', 'יומי'], ['free', 'ללא הגבלה']]) {
+    const b = el('button', 'chip', label);
+    b.setAttribute('aria-pressed', statsFilter === key);
+    b.onclick = () => { statsFilter = key; renderStats(); };
+    filters.append(b);
+  }
+  card.append(filters);
+
+  const grid = el('div', 'stats-grid');
+  const pct = list.length ? Math.round(100 * solved.length / list.length) + '%' : '–';
+  for (const [value, label] of [[list.length, 'משחקים'], [pct, 'נפתרו'], [avg(e => e.tries), 'ניסיונות בממוצע'], [avg(e => e.hints), 'רמזים בממוצע']]) {
+    const s = el('div', 'stat');
+    s.append(el('b', null, value), el('span', null, label));
+    grid.append(s);
+  }
+  card.append(grid);
+
+  if (!list.length) {
+    card.append(el('p', 'stats-note', 'עוד אין כאן משחקים שהסתיימו. מילה שנפתרה, נחשפה או נשארה לא גמורה תופיע כאן.'));
+  } else {
+    const table = el('table', 'hist');
+    const head = el('tr');
+    for (const h of ['מתי', 'מילה', 'תוצאה', 'ניסיונות', 'רמזים']) head.append(el('th', null, h));
+    table.append(el('thead'));
+    table.tHead.append(head);
+    const body = el('tbody');
+    for (const e of list) {
+      const tr = el('tr');
+      const when = el('td', null, e.mode === 'daily' ? `יומי #${e.day}` : new Date(e.endedAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }));
+      if (e.hard) when.append(el('span', 'meta', 'מצב קשה'));
+      const result = el('td');
+      result.append(el('span', 'badge ' + e.outcome, OUTCOMES[e.outcome] || e.outcome));
+      tr.append(when, el('td', 'word', display(e.answer)), result, el('td', 'num', e.tries), el('td', 'num', e.hints));
+      body.append(tr);
+    }
+    table.append(body);
+    card.append(table);
+  }
+  card.append(el('p', 'stats-note', historyDb ? 'ההיסטוריה נשמרת בחשבון שלך ומופיעה בכל מכשיר.' : 'ההיסטוריה נשמרת בדפדפן הזה בלבד.'));
+  o.replaceChildren(card);
+}
+function openStats() {
+  renderStats();
+  const o = document.getElementById('stats');
+  o.hidden = false;
+  o.querySelector('.close').focus();
+}
+function closeStats() { document.getElementById('stats').hidden = true; }
+
 document.getElementById('help-btn').onclick = openHelp;
 document.getElementById('help').addEventListener('click', e => { if (e.target.id === 'help') closeHelp(); });
 document.getElementById('stats-btn').onclick = openStats;
@@ -856,4 +907,7 @@ document.addEventListener('keydown', e => {
 
 loadGame(store.get('mode') === 'free' ? 'free' : 'daily');
 if (!store.get('seen-help')) { openHelp(); store.set('seen-help', true); }
+connectHistory();
 </script>
+
+</body></html>
