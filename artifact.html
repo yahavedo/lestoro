@@ -124,6 +124,17 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 }
 .slot.new { color: var(--green); border-color: var(--green); }
 .status .actions { display: flex; gap: 6px; }
+.tip-wrap { position: relative; display: inline-flex; }
+.tip {
+  position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 15;
+  width: max-content; max-width: min(280px, calc(100vw - 32px));
+  background: var(--ink); color: var(--bg); border-radius: 8px; padding: 10px 12px;
+  font-size: .85rem; line-height: 1.45; font-weight: 400;
+  opacity: 0; visibility: hidden; transition: opacity .15s;
+  pointer-events: none;
+}
+.tip-wrap:hover .tip, .tip-wrap:focus-within .tip { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
 
 .result { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .result h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; margin: 0; color: var(--green); }
@@ -345,7 +356,7 @@ function guideCard(withClose) {
   }
   const note = document.createElement('p');
   note.className = 'note';
-  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? כל רמז חושף משהו שעוד לא ידעתם: קודם אות שנמצאת במילה, אחר כך האות הראשונה והאחרונה, אורך המילה, ובסוף אותיות במקומן. במצב קשה כל ניחוש חייב להשתמש במה שכבר גיליתם: ההתחלה והסוף, אותיות צמודות וכל האותיות שנמצאו.';
+  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? כל רמז חושף משהו שעוד לא ידעתם: קודם אות שנמצאת במילה, אחר כך האות הראשונה והאחרונה, אורך המילה, ובסוף אותיות במקומן. במצב קשה כל ניחוש חייב להשתמש במה שכבר גיליתם: ההתחלה והסוף, הסדר של האותיות הירוקות, אותיות צמודות וכל האותיות שנמצאו.';
   card.append(note);
   if (withClose) {
     const play = document.createElement('button');
@@ -413,12 +424,21 @@ function renderStatus() {
   s.append(left);
   const actions = document.createElement('div');
   actions.className = 'actions';
+  const hardWrap = document.createElement('span');
+  hardWrap.className = 'tip-wrap';
   const hard = document.createElement('button');
   hard.className = 'chip';
   hard.textContent = 'מצב קשה';
   hard.setAttribute('aria-pressed', game.hard);
+  hard.setAttribute('aria-describedby', 'hard-tip');
   hard.onclick = toggleHard;
-  actions.append(hard);
+  const tip = document.createElement('span');
+  tip.className = 'tip';
+  tip.id = 'hard-tip';
+  tip.setAttribute('role', 'tooltip');
+  tip.textContent = 'במצב קשה כל ניחוש חייב להשתמש במה שכבר גיליתם: להתחיל ולהסתיים כמו שנמצא, לשמור על הסדר של האותיות הירוקות ועל אותיות צמודות, ולהשתמש בכל האותיות שנמצאו. אפשר להפעיל ולכבות בכל שלב.';
+  hardWrap.append(hard, tip);
+  actions.append(hardWrap);
   const next = nextHint();
   if (!game.won && next) {
     const b = document.createElement('button');
@@ -444,23 +464,19 @@ function renderStatus() {
   s.append(actions);
 }
 
-// Hard mode can only start before the first guess; turning it on mid-game applies from the next game
+// Hard mode can be switched at any point. A game counts as hard (in the shared result)
+// only if it was on from the first guess and never turned off.
 function toggleHard() {
-  if (game.hard) {
-    game.hard = false;
-    store.set('hard', false);
-    showToast('מצב קשה כבוי');
-  } else if (!game.guesses.length) {
-    game.hard = true;
-    store.set('hard', true);
-    showToast('מצב קשה: כל ניחוש חייב להשתמש במה שכבר גיליתם', 2600);
-  } else {
-    store.set('hard', true);
-    showToast('מצב קשה יופעל מהמשחק הבא', 2400);
-  }
+  game.hard = !game.hard;
+  store.set('hard', game.hard);
+  // Before the first guess the game starts fresh; afterwards any switch means it wasn't hard all along
+  if (!game.guesses.length) delete game.hardAllGame;
+  else game.hardAllGame = false;
+  showToast(game.hard ? 'מצב קשה פעיל' : 'מצב קשה כבוי');
   save();
   render();
 }
+const playedHard = () => game.hard && game.hardAllGame !== false;
 
 // Hard mode: a guess must keep what earlier guesses and hints revealed. Returns why it doesn't, or null.
 function hardModeError(word) {
@@ -624,7 +640,7 @@ function shareText() {
   const rows = game.guesses.slice(0, -1).map(g => score(game.answer, g).map(m =>
     m.cls === 'absent' ? '⬛' : (m.start || m.end) ? '🟢' : m.cls === 'present' ? '🟨' : '🟩').join(''));
   const n = game.guesses.length;
-  const title = (mode === 'daily' ? `אותיות בסדר #${game.day}` : 'אותיות בסדר · משחק חופשי') + (game.hard ? ' · מצב קשה' : '');
+  const title = (mode === 'daily' ? `אותיות בסדר #${game.day}` : 'אותיות בסדר · משחק חופשי') + (playedHard() ? ' · מצב קשה' : '');
   const hints = game.hints ? ` ו־${game.hints} ${game.hints === 1 ? 'רמז' : 'רמזים'}` : '';
   return `${title}\nהצלחתי ב־${n} ${n === 1 ? 'ניסיון' : 'ניסיונות'}${hints}\n${[...rows, '✅'].join(' ')}`;
 }
