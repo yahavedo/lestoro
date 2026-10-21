@@ -467,10 +467,11 @@ function hardModeError(word) {
   const letters = [...word], len = game.answer.length;
   let start = game.revealed.includes(0) ? game.answer[0] : '';
   let end = game.revealed.includes(len - 1) ? game.answer[len - 1] : '';
-  const blocks = [];
+  // For each earlier guess, its green blocks in order: a head followed by any tails.
+  // Blocks are contiguous in the answer and appear in it in this order.
+  const sequences = [];
   for (const g of game.guesses) {
-    const gl = [...norm(g)], marks = score(game.answer, g);
-    // Runs of joined green letters: a head followed by one or more tails
+    const gl = [...norm(g)], marks = score(game.answer, g), blocks = [];
     for (let i = 0; i < marks.length; i++) {
       if (marks[i].cls !== 'head') continue;
       let j = i + 1;
@@ -478,13 +479,24 @@ function hardModeError(word) {
       const run = gl.slice(i, j).join('');
       if (marks[i].start && run.length > start.length) start = run;
       if (marks[j - 1].end && run.length > end.length) end = run;
-      if (j - i >= 2) blocks.push(run);
+      blocks.push(run);
     }
+    if (blocks.length) sequences.push(blocks);
   }
   if (start && !word.startsWith(start)) return `במצב קשה המילה חייבת להתחיל ב־${start}`;
   if (end && !word.endsWith(end)) return `במצב קשה המילה חייבת להסתיים ב־${display(end)}`;
-  const missingBlock = blocks.find(b => !word.includes(b));
-  if (missingBlock) return `במצב קשה צריך להשתמש ברצף ${missingBlock}`;
+  for (const blocks of sequences) {
+    let pos = 0;
+    const inOrder = blocks.every(b => {
+      const at = word.indexOf(b, pos);
+      if (at < 0) return false;
+      pos = at + b.length;
+      return true;
+    });
+    if (inOrder) continue;
+    if (blocks.length === 1) return blocks[0].length > 1 ? `במצב קשה צריך להשתמש ברצף ${blocks[0]}` : `במצב קשה צריך להשתמש באות ${blocks[0]}`;
+    return `במצב קשה צריך לשמור על הסדר: ${blocks.join(' ואחר כך ')}`;
+  }
   for (const [c, n] of Object.entries(knownLetterCounts())) {
     const have = letters.filter(x => x === c).length;
     if (have < n) return n > 1 ? `במצב קשה צריך להשתמש ${n} פעמים באות ${c}` : `במצב קשה צריך להשתמש באות ${c}`;
