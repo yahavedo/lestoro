@@ -30,8 +30,10 @@ valid = set(read_words('valid.txt')) | set(extra)
 # Secret words grouped by length; the game picks a length first, then a word of that length.
 secrets = {}
 for w in read_words('secrets.txt') + extra:
+    if len(w) < 4:  # too short to be a fun secret word; still a valid guess
+        continue
     group = secrets.setdefault(len(w), [])
-    if len(w) >= 3 and w not in group:
+    if w not in group:
         group.append(w)
 # Fixed order so every player gets the same daily word.
 for n in sorted(secrets):
