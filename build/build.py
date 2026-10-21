@@ -27,12 +27,16 @@ def read_words(name):
 extra = read_words('extra.txt')
 valid = set(read_words('valid.txt')) | set(extra)
 
-secrets = []
+# Secret words grouped by length; the game picks a length first, then a word of that length.
+secrets = {}
 for w in read_words('secrets.txt') + extra:
-    if len(w) >= 4 and w not in secrets:
-        secrets.append(w)
+    group = secrets.setdefault(len(w), [])
+    if len(w) >= 3 and w not in group:
+        group.append(w)
 # Fixed order so every player gets the same daily word.
-random.Random(5786).shuffle(secrets)
+for n in sorted(secrets):
+    random.Random(5786 + n).shuffle(secrets[n])
+secrets = {n: secrets[n] for n in sorted(secrets)}
 
 by_len = {}
 for w in sorted(valid):
@@ -50,4 +54,4 @@ standalone = ('<!doctype html>\n<html lang="he" dir="rtl">\n<head>\n<meta charse
               '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
               '</head>\n<body>\n' + page + '\n</body>\n</html>\n')
 (ROOT / 'index.html').write_text(standalone, encoding='utf-8')
-print(f'{len(valid)} valid words, {len(secrets)} secret words, {len(page.encode()) // 1024} KB')
+print(f'{len(valid)} valid words, secret words by length: {({n: len(ws) for n, ws in secrets.items()})}, {len(page.encode()) // 1024} KB')
