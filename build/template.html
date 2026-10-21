@@ -114,7 +114,7 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .guide .play { align-self: center; }
 .empty { margin: auto 0 0; text-align: center; color: var(--muted); }
 
-.status { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.status { min-height: 40px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-block: 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .status .count { color: var(--muted); font-size: .95rem; }
 .status .hint { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; margin-top: 4px; font-weight: 700; }
 .status .hint span:first-child { margin-left: 4px; }
@@ -246,9 +246,9 @@ function loadGame(m) {
   if (m === 'daily') {
     const day = dayNumber();
     const saved = store.get('daily');
-    game = saved && saved.day === day ? saved : { day, answer: dailyAnswer(day), guesses: [], hints: 0, revealed: [], letterHints: [], won: false };
+    game = saved && saved.day === day ? saved : { day, answer: dailyAnswer(day), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   } else {
-    game = store.get('free') || { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], won: false };
+    game = store.get('free') || { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   }
   // Saves from before positional hints only stored a count of letters revealed from the start
   if (!game.revealed) game.revealed = [...Array(game.hints).keys()];
@@ -260,7 +260,7 @@ function loadGame(m) {
 function save() { store.set(mode, game); }
 
 function newFreeGame() {
-  game = { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], won: false };
+  game = { answer: randomAnswer(), guesses: [], hints: 0, revealed: [], letterHints: [], hard: store.get('hard') === true, won: false };
   typed = '';
   save();
   render();
@@ -304,7 +304,7 @@ function guideCard(withClose) {
   }
   const note = document.createElement('p');
   note.className = 'note';
-  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? כל רמז חושף משהו שעוד לא ידעתם: קודם אות שנמצאת במילה, אחר כך האות הראשונה והאחרונה, אורך המילה, ובסוף אותיות במקומן.';
+  note.textContent = 'אין הגבלה על מספר הניסיונות. אותיות סופיות נחשבות כמו האות הרגילה. נתקעתם? כל רמז חושף משהו שעוד לא ידעתם: קודם אות שנמצאת במילה, אחר כך האות הראשונה והאחרונה, אורך המילה, ובסוף אותיות במקומן. במצב קשה כל ניחוש חייב להשתמש במה שכבר גיליתם: ההתחלה והסוף, אותיות צמודות וכל האותיות שנמצאו.';
   card.append(note);
   if (withClose) {
     const play = document.createElement('button');
@@ -372,6 +372,12 @@ function renderStatus() {
   s.append(left);
   const actions = document.createElement('div');
   actions.className = 'actions';
+  const hard = document.createElement('button');
+  hard.className = 'chip';
+  hard.textContent = 'מצב קשה';
+  hard.setAttribute('aria-pressed', game.hard);
+  hard.onclick = toggleHard;
+  actions.append(hard);
   const next = nextHint();
   if (!game.won && next) {
     const b = document.createElement('button');
@@ -395,6 +401,54 @@ function renderStatus() {
     actions.append(b);
   }
   s.append(actions);
+}
+
+// Hard mode can only start before the first guess; turning it on mid-game applies from the next game
+function toggleHard() {
+  if (game.hard) {
+    game.hard = false;
+    store.set('hard', false);
+    showToast('מצב קשה כבוי');
+  } else if (!game.guesses.length) {
+    game.hard = true;
+    store.set('hard', true);
+    showToast('מצב קשה: כל ניחוש חייב להשתמש במה שכבר גיליתם', 2600);
+  } else {
+    store.set('hard', true);
+    showToast('מצב קשה יופעל מהמשחק הבא', 2400);
+  }
+  save();
+  render();
+}
+
+// Hard mode: a guess must keep what earlier guesses and hints revealed. Returns why it doesn't, or null.
+function hardModeError(word) {
+  const letters = [...word], len = game.answer.length;
+  let start = game.revealed.includes(0) ? game.answer[0] : '';
+  let end = game.revealed.includes(len - 1) ? game.answer[len - 1] : '';
+  const blocks = [];
+  for (const g of game.guesses) {
+    const gl = [...norm(g)], marks = score(game.answer, g);
+    // Runs of joined green letters: a head followed by one or more tails
+    for (let i = 0; i < marks.length; i++) {
+      if (marks[i].cls !== 'head') continue;
+      let j = i + 1;
+      while (j < marks.length && marks[j].cls === 'tail') j++;
+      const run = gl.slice(i, j).join('');
+      if (marks[i].start && run.length > start.length) start = run;
+      if (marks[j - 1].end && run.length > end.length) end = run;
+      if (j - i >= 2) blocks.push(run);
+    }
+  }
+  if (start && !word.startsWith(start)) return `במצב קשה המילה חייבת להתחיל ב־${start}`;
+  if (end && !word.endsWith(end)) return `במצב קשה המילה חייבת להסתיים ב־${display(end)}`;
+  const missingBlock = blocks.find(b => !word.includes(b));
+  if (missingBlock) return `במצב קשה צריך להשתמש ברצף ${missingBlock}`;
+  for (const [c, n] of Object.entries(knownLetterCounts())) {
+    const have = letters.filter(x => x === c).length;
+    if (have < n) return n > 1 ? `במצב קשה צריך להשתמש ${n} פעמים באות ${c}` : `במצב קשה צריך להשתמש באות ${c}`;
+  }
+  return null;
 }
 
 // Positions of the answer the player already knows: a start/end run seen in a guess, or a revealed hint
@@ -517,7 +571,7 @@ function shareText() {
   const rows = game.guesses.slice(0, -1).map(g => score(game.answer, g).map(m =>
     m.cls === 'absent' ? '⬛' : (m.start || m.end) ? '🟢' : m.cls === 'present' ? '🟨' : '🟩').join(''));
   const n = game.guesses.length;
-  const title = mode === 'daily' ? `אותיות בסדר #${game.day}` : 'אותיות בסדר · משחק חופשי';
+  const title = (mode === 'daily' ? `אותיות בסדר #${game.day}` : 'אותיות בסדר · משחק חופשי') + (game.hard ? ' · מצב קשה' : '');
   const hints = game.hints ? ` ו־${game.hints} ${game.hints === 1 ? 'רמז' : 'רמזים'}` : '';
   return `${title}\nהצלחתי ב־${n} ${n === 1 ? 'ניסיון' : 'ניסיונות'}${hints}\n${[...rows, '✅'].join(' ')}`;
 }
@@ -585,6 +639,10 @@ function submit() {
   if ([...typed].length < 2) return reject('הקלידו לפחות שתי אותיות');
   if (!isValid(typed)) return reject('המילה לא נמצאה במילון');
   if (game.guesses.includes(typed)) return reject('כבר ניסיתם את המילה הזו');
+  if (game.hard) {
+    const err = hardModeError(typed);
+    if (err) return reject(err);
+  }
   game.guesses.push(typed);
   if (typed === game.answer) { game.won = true; justWon = true; }
   typed = '';
