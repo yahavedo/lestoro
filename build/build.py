@@ -29,7 +29,7 @@ valid = set(read_words('valid.txt')) | set(extra)
 
 secrets = []
 for w in read_words('secrets.txt') + extra:
-    if len(w) >= 3 and w not in secrets:
+    if len(w) >= 4 and w not in secrets:
         secrets.append(w)
 # Fixed order so every player gets the same daily word.
 random.Random(5786).shuffle(secrets)
